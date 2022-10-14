@@ -7,20 +7,36 @@ on:
         required: true
         type: string
         default: '0.0.0'
+    outputs:
+      branch_name:
+        description: "Release branch name"
+        value: ${{ jobs.release_pull_requests.outputs.branch_name }}
 
 jobs:
-  release_pull-requests:
+  release_pull_requests:
     name: Bump version and create release PRs
     runs-on: macos-latest
+    outputs:
+      branch_name: ${{ env.branch_name }}
 
     steps:
+      - name: Remember branch name
+        run: echo "branch_name=release/${{ inputs.version }}" >> $GITHUB_ENV
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Bump release version
+        run: |
+          fastlane bump version:${{ inputs.version }}
+
       - name: Create pull request
         uses: peter-evans/create-pull-request@v3
         with:
-          title: Release ${{ github.event.inputs.version }}
+          title: Release ${{ inputs.version }}
           body: Release PR
           labels: autocreated
-          branch: release/${{ github.event.inputs.version }}
+          branch: ${{ env.branch_name }}
           base: develop
 
       - uses: actions/checkout@v2
@@ -29,14 +45,17 @@ jobs:
 
       - name: Reset main branch
         run: |
-          git fetch origin release/${{ github.event.inputs.version }}:release/${{ github.event.inputs.version }}
-          git reset --hard release/${{ github.event.inputs.version }}
+          git fetch origin ${{ env.branch_name }}:${{ env.branch_name }}
+          git reset --hard ${{ env.branch_name }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
-          title: Release ${{ github.event.inputs.version }}
+          title: Release ${{ inputs.version }}
           body: Release PR
           labels: autocreated
-          branch: release/${{ github.event.inputs.version }}
+          branch: ${{ env.branch_name }}
           base: main
+
+      - id: step1
+        run: echo "::set-output name=branch_name::${{ env.branch_name }}"
