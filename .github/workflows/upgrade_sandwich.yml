@@ -5,6 +5,7 @@ on:
       sandwich_version:
         description: 'Sandwich version'
         required: true
+        type: string
         default: '0.0.0'
 
 jobs:
